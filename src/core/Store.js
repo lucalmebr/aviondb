@@ -1,34 +1,13 @@
-import * as OrbitdbStore from "orbit-db-store";
-import * as OrbitDB from "orbit-db";
-import Collection from "./Collection";
-import { Ipfs } from "ipfs";
-import { EventEmitter } from "events";
-import { IdentityProvider } from "orbit-db-identity-provider";
-import {
-  CollectionOptions,
-  OrbitDBOptions,
-  IStoreOptions,
-  IOpenOptions,
-  ICreateOptions,
-} from "./interfaces";
-import { LogEntry } from "ipfs-log";
-const Index = require("./StoreIndex");
-const debug = require("debug")("aviondb:store");
-let orbitdb: OrbitDB;
+import OrbitdbStore from "orbit-db-store";
+import OrbitDB from "orbit-db";
+import Collection from "./Collection.js";
+import Index from "./StoreIndex.js";
+import debugLib from "debug";
+const debug = debugLib("aviondb:store");
+let orbitdb;
 
 class Store extends OrbitdbStore {
-  _type: string;
-  _orbitdb: OrbitDB;
-  openCollections: any;
-  _index: any;
-  events: EventEmitter;
-  address: { root: string; path: string };
-  constructor(
-    ipfs: Ipfs,
-    id: IdentityProvider,
-    dbname: string,
-    options?: IStoreOptions
-  ) {
+  constructor(ipfs, id, dbname, options) {
     const opts = { Index };
     Object.assign(opts, options);
     super(ipfs, id, dbname, opts);
@@ -41,48 +20,36 @@ class Store extends OrbitdbStore {
 
     this._index.store = this;
 
-    this.events.on(
-      "write",
-      (address: string, entry: LogEntry<any>, heads: LogEntry<any>[]) => {
-        this._index.handleEntry(entry);
-      }
-    );
+    this.events.on("write", (address, entry, heads) => {
+      this._index.handleEntry(entry);
+    });
     this.events.on(
       "replicate.progress",
-      (
-        address: string,
-        hash: Multihash,
-        entry: LogEntry<any>,
-        progress: number,
-        total: number
-      ) => {
+      (address, hash, entry, progress, total) => {
         this._index.handleEntry(entry);
       }
     );
 
-    this.events.on(
-      "db.createCollection",
-      async (name: string, address: string) => {
-        if (!this.openCollections[name]) {
-          this.openCollections[name] = await this.openCollection(address);
-        }
+    this.events.on("db.createCollection", async (name, address) => {
+      if (!this.openCollections[name]) {
+        this.openCollections[name] = await this.openCollection(address);
       }
-    );
+    });
   }
   /**
    * Create a collection
    * @param {String} name Name of collection
    * @param {CollectionOptions} options Options for avoindb
    * @param {ICreateOptions} orbitDbOptions Options directly passed into orbitdb.create()
-   * @returns {Promise<Collection>} Returns a Promise that resolves to an AvionDB Collection instance
+   * @return {Promise<Collection>} Returns a Promise that resolves to an AvionDB Collection instance
    */
   async createCollection(
-    name: string,
-    options: CollectionOptions = { overwrite: false },
-    orbitDbOptions: ICreateOptions = {}
-  ): Promise<Collection> {
+    name,
+    options = { overwrite: false },
+    orbitDbOptions = {}
+  ) {
     orbitDbOptions.meta = {
-      parent: this.address.root,
+      parent: this.address.root
     };
     const { overwrite } = options;
     if (overwrite) {
@@ -100,11 +67,11 @@ class Store extends OrbitdbStore {
       orbitDbOptions
     );
     this.openCollections[name] = collection;
-    //@ts-ignore
+    // @ts-ignore
     await this._addOperation({
       op: "collection.create",
       address: collection.address.toString(),
-      name,
+      name
     });
     return collection;
   }
@@ -114,13 +81,9 @@ class Store extends OrbitdbStore {
    * @param {String} name Name of collection
    * @param {CollectionOptions} options options for avoindb
    * @param {IOpenOptions} orbitDbOptions options directly passed into orbitdb.open()
-   * @returns {Promise<Collection>} Returns a Promise that resolves to an AvionDB Collection instance
+   * @return {Promise<Collection>} Returns a Promise that resolves to an AvionDB Collection instance
    */
-  async openCollection(
-    name: string,
-    options: CollectionOptions = { create: false },
-    orbitDbOptions?: IOpenOptions
-  ): Promise<Collection> {
+  async openCollection(name, options = { create: false }, orbitDbOptions) {
     const { create } = options;
     if (!name || typeof name !== "string") {
       throw "name must be a string";
@@ -149,13 +112,9 @@ class Store extends OrbitdbStore {
    * @param {string} name Name of collection
    * @param {CollectionOptions} options options for avoindb
    * @param {IStoreOptions} orbitDbOptions options directly passed into orbitdb.open() or orbitdb.create()
-   * @returns {Promise<Collection>} Returns a Promise that resolves to an AvionDB Collection instance
+   * @return {Promise<Collection>} Returns a Promise that resolves to an AvionDB Collection instance
    */
-  async initCollection(
-    name: string,
-    options?: CollectionOptions,
-    orbitDbOptions?: IStoreOptions
-  ): Promise<Collection | undefined> {
+  async initCollection(name, options, orbitDbOptions) {
     if (!name || typeof name !== "string") {
       throw "name must be a string";
     }
@@ -173,16 +132,16 @@ class Store extends OrbitdbStore {
    * @param {string} name Name of collection to be dropped
    * @param {JSON Object} options
    */
-  async dropCollection(name: string, options: any = {}) {
+  async dropCollection(name, options = {}) {
     if (!name || typeof name !== "string") {
       throw "Name must be a string";
     }
     const collectionInfo = this._index._index[name];
-    //@ts-ignore
+    // @ts-ignore
     await this._addOperation({
       op: "collection.drop",
       address: collectionInfo.address,
-      name,
+      name
     });
   }
   /**
@@ -191,16 +150,16 @@ class Store extends OrbitdbStore {
    * @param {JSON Object} options
    * @returns {Array<string>} Returns an Array of Collection names
    */
-  listCollections(filter: any = {}, options: any = {}): Array<string> {
+  listCollections(filter = {}, options = {}) {
     return Object.keys(this._index._index);
   }
   /**
    * Returns collection instance. Throws error if collection is not open.
    *
    * @param {string} name Name of collection
-   * @returns {Promise<Collection>} Returns a Promise that resolves to an AvionDB Collection instance
+   * @return {Promise<Collection>} Returns a Promise that resolves to an AvionDB Collection instance
    */
-  collection(name: string): Promise<Collection> {
+  collection(name) {
     if (!name || typeof name !== "string") {
       throw "Name must be a string";
     }
@@ -213,16 +172,16 @@ class Store extends OrbitdbStore {
    * Closes an open collection
    * @param {string} name Name of collection
    */
-  async closeCollection(name: string) {
+  async closeCollection(name) {
     if (this.openCollections[name]) {
       await this.openCollections[name].close();
     }
   }
-  async load(number: number, options: any = {}) {
+  async load(number, options = {}) {
     await super.load(number, options);
     debug("datastore is loading");
 
-    //Load and start collections into memory.
+    // Load and start collections into memory.
     for (const name of this.listCollections()) {
       await this.openCollection(name);
     }
@@ -239,14 +198,9 @@ class Store extends OrbitdbStore {
    * @param {Ipfs} ipfs IPFS Instance
    * @param {IStoreOptions} options options to be passed to orbitdb.create()
    * @param {OrbitDBOptions} orbitDbOptions options to be passed to OrbitDB.createInstance()
-   * @returns {Promise<Store>} Returns a Promise that resolves to an AvionDB instance
+   * @return {Promise<Store>} Returns a Promise that resolves to an AvionDB instance
    */
-  static async create(
-    name: string,
-    ipfs: Ipfs,
-    options?: IStoreOptions,
-    orbitDbOptions?: OrbitDBOptions
-  ): Promise<Store> {
+  static async create(name, ipfs, options, orbitDbOptions) {
     if (!orbitdb) {
       orbitdb = await OrbitDB.createInstance(ipfs, orbitDbOptions);
     }
@@ -261,14 +215,9 @@ class Store extends OrbitdbStore {
    * @param {Ipfs} ipfs IPFS Instance
    * @param {IStoreOptions} options options to be passed to orbitdb.open()
    * @param {OrbitDBOptions} orbitDbOptions options to be passed to OrbitDB.createInstance()
-   * @returns {Promise<Store>} Returns a Promise that resolves to an AvionDB instance
+   * @return {Promise<Store>} Returns a Promise that resolves to an AvionDB instance
    */
-  static async open(
-    address: string,
-    ipfs: Ipfs,
-    options?: IStoreOptions,
-    orbitDbOptions?: OrbitDBOptions
-  ): Promise<Store> {
+  static async open(address, ipfs, options, orbitDbOptions) {
     if (!orbitdb) {
       orbitdb = await OrbitDB.createInstance(ipfs, orbitDbOptions);
     }
@@ -285,14 +234,9 @@ class Store extends OrbitdbStore {
    * @param {Ipfs} ipfs IPFS Instance
    * @param {IStoreOptions} options options to be passed to orbitdb.open() or orbitdb.create()
    * @param {OrbitDBOptions} orbitDbOptions options to be passed to OrbitDB.createInstance()
-   * @returns {Promise<Store>} Returns a Promise that resolves to an AvionDB instance
+   * @return {Promise<Store>} Returns a Promise that resolves to an AvionDB instance
    */
-  static async init(
-    name: string,
-    ipfs: Ipfs,
-    options?: IStoreOptions,
-    orbitDbOptions?: OrbitDBOptions
-  ): Promise<Store> {
+  static async init(name, ipfs, options, orbitDbOptions) {
     if (!name || typeof name !== "string") {
       throw "name must be a string";
     }

@@ -1,12 +1,6 @@
-import * as arrSort from "array-sort";
-import { DocumentInterface } from "../interfaces";
+import arrSort from "array-sort";
 
-const parseAndFind = (
-  query: Object = {},
-  options: any,
-  documents: any,
-  findOne: boolean = false
-) => {
+const parseAndFind = (query = {}, options, documents, findOne = false) => {
   const docs = Object.values(documents);
   let filteredDocs = [];
   let skipped = 0;
@@ -14,14 +8,14 @@ const parseAndFind = (
   const sortFirst = !!(Object.keys(options)[0] === "sort");
   const emptyQuery = Object.keys(query).length === 0;
   options.skip = options.skip || 0;
-  const condition = (len) => (options.limit ? options.limit === len : false);
+  const condition = len => (options.limit ? options.limit === len : false);
   if (!findOne) {
     if (emptyQuery) {
       filteredDocs = docs;
       if (doSort && sortFirst) {
         Object.keys(options.sort).map((field, index) => {
           filteredDocs = arrSort(filteredDocs, field, {
-            reverse: options.sort[field] === 1 ? false : true,
+            reverse: options.sort[field] === 1 ? false : true
           });
         });
       }
@@ -33,7 +27,7 @@ const parseAndFind = (
       if (doSort && !sortFirst) {
         Object.keys(options.sort).map((field, index) => {
           filteredDocs = arrSort(filteredDocs, field, {
-            reverse: options.sort[field] === 1 ? false : true,
+            reverse: options.sort[field] === 1 ? false : true
           });
         });
       }
@@ -47,7 +41,7 @@ const parseAndFind = (
         }
         Object.keys(options.sort).map((field, index) => {
           filteredDocs = arrSort(index === 0 ? docs : filteredDocs, field, {
-            reverse: options.sort[field] === 1 ? false : true,
+            reverse: options.sort[field] === 1 ? false : true
           });
         });
         if (options.limit) {
@@ -69,7 +63,7 @@ const parseAndFind = (
                     index === 0 ? docs : filteredDocs,
                     field,
                     {
-                      reverse: options.sort[field] === 1 ? false : true,
+                      reverse: options.sort[field] === 1 ? false : true
                     }
                   );
                 });
@@ -82,7 +76,7 @@ const parseAndFind = (
         if (doSort && !sortFirst) {
           Object.keys(options.sort).map((field, index) => {
             filteredDocs = arrSort(index === 0 ? docs : filteredDocs, field, {
-              reverse: options.sort[field] === 1 ? false : true,
+              reverse: options.sort[field] === 1 ? false : true
             });
           });
         }
@@ -156,7 +150,7 @@ Possible queries
  * @returns {boolean}
  */
 
-const evaluateQuery = (doc: any, query: any) => {
+const evaluateQuery = (doc, query) => {
   let res;
   let killSwitch = true; // kills the main loop if set to false
   const fields = Object.keys(query);
@@ -211,7 +205,7 @@ const evaluateQuery = (doc: any, query: any) => {
     else {
       res = true;
       for (let i = 0; i < fields.length; i++) {
-        const check: any = {};
+        const check = {};
         check[fields[i]] = query[fields[i]];
         if (!evaluateCondition(check, doc)) {
           res = false;
@@ -232,17 +226,17 @@ const evaluateQuery = (doc: any, query: any) => {
  * @returns {boolean}
  */
 
-const evaluateCondition = (condition: any, doc: any) => {
+const evaluateCondition = (condition, doc) => {
   let res = true;
-  Object.keys(condition).forEach((field) => {
-    //Check if condition[field] is a JSON object with keys having "$" character
+  Object.keys(condition).forEach(field => {
+    // Check if condition[field] is a JSON object with keys having "$" character
     if (
       condition[field].constructor === Object &&
       Object.keys(condition[field]).length > 0
     ) {
       const logicConditions = Object.keys(condition[field]);
       if (logicConditions[0][0] === "$") {
-        //{ qty: { $lt: 20, $gt: 10 } }
+        // { qty: { $lt: 20, $gt: 10 } }
         for (let i = 0; i < logicConditions.length && res; i++) {
           switch (logicConditions[i]) {
             case "$lt":
@@ -272,26 +266,26 @@ const evaluateCondition = (condition: any, doc: any) => {
           }
         }
       } else {
-        //{qty: {"fname": "vasa", "lname": "develop"}}
+        // {qty: {"fname": "vasa", "lname": "develop"}}
         if (!jsonEqual(doc[field], condition[field])) {
           res = false;
         }
       }
     } else {
-      //{qty: [1,2]}
+      // {qty: [1,2]}
       if (condition[field].constructor === Array) {
         if (!arraysEqual(doc[field], condition[field])) {
           res = false;
         }
       }
-      //{qty: {}}
+      // {qty: {}}
       else if (condition[field].constructor === Object) {
         if (!jsonEqual(doc[field], condition[field])) {
           res = false;
         }
       }
-      //{ qty: 30 }
-      //{qty: null}
+      // { qty: 30 }
+      // {qty: null}
       else {
         if (!(doc[field] === condition[field])) {
           res = false;
@@ -310,7 +304,7 @@ const evaluateCondition = (condition: any, doc: any) => {
  * @param {Array} docs
  */
 
-const eq = (argValue: any, comparisonValue: any) => {
+const eq = (argValue, comparisonValue) => {
   return argValue === comparisonValue;
 };
 
@@ -320,7 +314,7 @@ const eq = (argValue: any, comparisonValue: any) => {
  * @param {Array} docs
  */
 
-const gt = (argValue: any, comparisonValue: any) => {
+const gt = (argValue, comparisonValue) => {
   return argValue > comparisonValue;
 };
 
@@ -330,7 +324,7 @@ const gt = (argValue: any, comparisonValue: any) => {
  * @param {Array} docs
  */
 
-const gte = (argValue: any, comparisonValue: any) => {
+const gte = (argValue, comparisonValue) => {
   return argValue >= comparisonValue;
 };
 
@@ -340,7 +334,7 @@ const gte = (argValue: any, comparisonValue: any) => {
  * @param {Array} docs
  */
 
-const inop = (argValue: any, comparisonValue: any) => {
+const inop = (argValue, comparisonValue) => {
   throw new Error("Not yet implemented.");
 };
 
@@ -350,7 +344,7 @@ const inop = (argValue: any, comparisonValue: any) => {
  * @param {Array} docs
  */
 
-const lt = (argValue: any, comparisonValue: any) => {
+const lt = (argValue, comparisonValue) => {
   return argValue < comparisonValue;
 };
 
@@ -360,7 +354,7 @@ const lt = (argValue: any, comparisonValue: any) => {
  * @param {Array} docs
  */
 
-const lte = (argValue: any, comparisonValue: any) => {
+const lte = (argValue, comparisonValue) => {
   return argValue <= comparisonValue;
 };
 
@@ -370,7 +364,7 @@ const lte = (argValue: any, comparisonValue: any) => {
  * @param {Array} docs
  */
 
-const ne = (arg: any, val: any) => {
+const ne = (arg, val) => {
   throw new Error("Not yet implemented.");
 };
 
@@ -380,7 +374,7 @@ const ne = (arg: any, val: any) => {
  * @param {Array} docs
  */
 
-const nin = (arg: any, val: any) => {
+const nin = (arg, val) => {
   throw new Error("Not yet implemented.");
 };
 
@@ -392,7 +386,7 @@ const nin = (arg: any, val: any) => {
  * @param {Array} docs
  */
 
-//$and
+// $and
 
 /**
  *
@@ -400,7 +394,7 @@ const nin = (arg: any, val: any) => {
  * @param {Array} docs
  */
 
-const not = (arg: any, val: any) => {
+const not = (arg, val) => {
   throw new Error("Not yet implemented.");
 };
 
@@ -410,7 +404,7 @@ const not = (arg: any, val: any) => {
  * @param {Array} docs
  */
 
-const nor = (arg: any, val: any) => {
+const nor = (arg, val) => {
   throw new Error("Not yet implemented.");
 };
 
@@ -420,7 +414,7 @@ const nor = (arg: any, val: any) => {
  * @param {Array} docs
  */
 
-//$or
+// $or
 
 // Element
 
@@ -430,7 +424,7 @@ const nor = (arg: any, val: any) => {
  * @param {Array} docs
  */
 
-const exists = (arg: any, val: any) => {
+const exists = (arg, val) => {
   throw new Error("Not yet implemented.");
 };
 
@@ -440,13 +434,13 @@ const exists = (arg: any, val: any) => {
  * @param {Array} docs
  */
 
-const type = (arg: any, val: any) => {
+const type = (arg, val) => {
   throw new Error("Not yet implemented.");
 };
 
 // Utility Functions
 
-const arraysEqual = (a: any, b: any) => {
+const arraysEqual = (a, b) => {
   if (a === b) return true;
   if (a == null || b == null) return false;
   if (a.length != b.length) return false;
@@ -462,7 +456,7 @@ const arraysEqual = (a: any, b: any) => {
   return true;
 };
 
-function jsonEqual(a: any, b: any) {
+function jsonEqual(a, b) {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 

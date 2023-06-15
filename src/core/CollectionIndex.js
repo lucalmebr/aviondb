@@ -1,44 +1,27 @@
-import { parseAndUpdate } from "./operators/UpdateOperators";
-import { parseAndFind } from "./operators/QueryOperators";
-import { FindOptionsInterface, Payload } from "./interfaces";
+import { parseAndUpdate } from "./operators/UpdateOperators.js";
+import { parseAndFind } from "./operators/QueryOperators.js";
 
-class CollectionIndex {
-  _index: any = {};
-  loaded: boolean;
+export default class CollectionIndex {
+
   constructor() {
     this._index = {};
     this.loaded = false;
   }
-  async find(
-    query: object = {},
-    projection?: object | string,
-    options: FindOptionsInterface = {},
-    callback?: Function
-  ) {
+  async find(query = {}, projection, options = {}, callback) {
     const res = parseAndFind(query, options, this._index, false);
     return res;
   }
 
-  async findOne(
-    query: object = {},
-    projection: object | string,
-    options: object = {},
-    callback?: Function
-  ) {
+  async findOne(query = {}, projection, options = {}, callback) {
     const res = parseAndFind(query, options, this._index, true);
     return res;
   }
 
-  async findById(
-    _id: string | number,
-    projection?: object | string,
-    options: object = {},
-    callback?: Function
-  ) {
+  async findById(_id, projection, options = {}, callback) {
     return this._index[_id];
   }
 
-  async distinct(key: string | number, query: object) {
+  async distinct(key, query) {
     if (!key) {
       throw "Key must not be undefined";
     }
@@ -50,14 +33,14 @@ class CollectionIndex {
     }
     const out = {};
     for (const entry of Object.values(index)) {
-      //TODO: Allow for sub object keys. I.e key.subkey
+      // TODO: Allow for sub object keys. I.e key.subkey
       if (entry[key]) {
         out[entry[key]] = null;
       }
     }
     return Object.keys(out);
   }
-  handleEntry(item: any) {
+  handleEntry(item) {
     const { payload } = item;
     switch (payload.op) {
       case "INSERT": {
@@ -74,28 +57,28 @@ class CollectionIndex {
       }
     }
   }
-  async handleInsert(payload: any) {
+  async handleInsert(payload) {
     const { value } = payload;
     for (const doc of value) {
       const _id = doc._id;
       this._index[_id] = doc;
     }
   }
-  handleUpdate(payload: any) {
+  handleUpdate(payload) {
     const { value, modification, options } = payload;
     for (const _id of value) {
       parseAndUpdate(this._index[_id], modification, options);
     }
   }
-  handleDelete(payload: any) {
+  handleDelete(payload) {
     const { value } = payload;
     for (const _id of value) {
       delete this._index[_id];
     }
   }
-  updateIndex(oplog: any) {
+  updateIndex(oplog) {
     if (!this.loaded) {
-      oplog.values.forEach((item: any) => {
+      oplog.values.forEach(item => {
         this.handleEntry(item);
       });
     }
@@ -103,4 +86,3 @@ class CollectionIndex {
   }
 }
 
-module.exports = CollectionIndex;

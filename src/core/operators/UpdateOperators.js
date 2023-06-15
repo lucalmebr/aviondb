@@ -1,5 +1,5 @@
 const parseAndUpdate = (doc, modification, options) => {
-  Object.keys(modification).forEach((operator) => {
+  Object.keys(modification).forEach(operator => {
     switch (operator) {
       case "$inc":
         doc = inc(doc, modification[operator], options);
@@ -55,7 +55,7 @@ const currentDate = (doc, modification, options) => {};
  */
 
 const inc = (doc, modification, options) => {
-  //TODO: Support updates via JSON typed field. Eg, "user.age"
+  // TODO: Support updates via JSON typed field. Eg, "user.age"
   for (const field in modification) {
     if (doc[field] && typeof doc[field] == "number") {
       doc[field] += modification[field];
@@ -72,7 +72,7 @@ const inc = (doc, modification, options) => {
  */
 
 const min = (doc, modification, options) => {
-  //TODO: Support updates via JSON typed field. Eg, "user.age"
+  // TODO: Support updates via JSON typed field. Eg, "user.age"
   for (const field in modification) {
     if (doc[field]) {
       if (doc[field] >= modification[field]) {
@@ -91,7 +91,7 @@ const min = (doc, modification, options) => {
  */
 
 const max = (doc, modification, options) => {
-  //TODO: Support updates via JSON typed field. Eg, "user.age"
+  // TODO: Support updates via JSON typed field. Eg, "user.age"
   for (const field in modification) {
     if (doc[field]) {
       if (doc[field] <= modification[field]) {
@@ -109,7 +109,7 @@ const max = (doc, modification, options) => {
  */
 
 const mul = (doc, modification, options) => {
-  //TODO: Support updates via JSON typed field. Eg, "user.age"
+  // TODO: Support updates via JSON typed field. Eg, "user.age"
   for (const field in modification) {
     if (doc[field] && typeof doc[field] == "number") {
       doc[field] *= modification[field];
@@ -127,7 +127,7 @@ const mul = (doc, modification, options) => {
  */
 
 const rename = (doc, modification, options) => {
-  //TODO: Support updates via JSON typed field. Eg, "user.age"
+  // TODO: Support updates via JSON typed field. Eg, "user.age"
   for (const field in modification) {
     if (doc[field]) {
       const value = doc[field];
@@ -146,8 +146,8 @@ const rename = (doc, modification, options) => {
  * @param {JSON Object} modification
  */
 
-const set = (doc, modification, options?) => {
-  //TODO: Support updates via JSON typed field. Eg, "user.age"
+const set = (doc, modification, options) => {
+  // TODO: Support updates via JSON typed field. Eg, "user.age"
   for (const field in modification) {
     doc[field] = modification[field];
   }
@@ -162,7 +162,7 @@ const set = (doc, modification, options?) => {
  */
 
 const setOnInsert = (doc, modification, options) => {
-  //TODO: Support updates via JSON typed field. Eg, "user.age"
+  // TODO: Support updates via JSON typed field. Eg, "user.age"
 
   return doc;
 };
@@ -173,8 +173,8 @@ const setOnInsert = (doc, modification, options) => {
  * @param {JSON Object} modification
  */
 
-const unset = (doc, modification, options: any = {}) => {
-  //TODO: Support updates via JSON typed field. Eg, "user.age"
+const unset = (doc, modification, options = {}) => {
+  // TODO: Support updates via JSON typed field. Eg, "user.age"
   for (const field in modification) {
     delete doc[field];
   }
@@ -190,7 +190,7 @@ const unset = (doc, modification, options: any = {}) => {
  */
 
 const addToSet = (doc, modification, options) => {
-  //TODO: Support updates via JSON typed field. Eg, "user.age"
+  // TODO: Support updates via JSON typed field. Eg, "user.age"
   for (const field in modification) {
     if (doc[field] && doc[field].constructor === Array) {
       if (!doc[field].includes(modification[field])) {
@@ -210,7 +210,7 @@ const addToSet = (doc, modification, options) => {
  */
 
 const pop = (doc, modification, options) => {
-  //TODO: Support updates via JSON typed field. Eg, "user.age"
+  // TODO: Support updates via JSON typed field. Eg, "user.age"
   for (const field in modification) {
     if (doc[field] && doc[field].constructor === Array) {
       if (doc[field].length > 0) {
@@ -232,18 +232,18 @@ const pop = (doc, modification, options) => {
  */
 
 const pull = (doc, modification, options) => {
-  //TODO: Support updates via JSON typed field. Eg, "user.age"
+  // TODO: Support updates via JSON typed field. Eg, "user.age"
   for (const field in modification) {
     if (doc[field] && doc[field].constructor === Array) {
-      //If the modification[field] is an Object
+      // If the modification[field] is an Object
       if (
         Object.keys(modification[field]).length === 0 &&
         modification[field].constructor === Object
       ) {
-        //TODO: remove the items that satisfy the condition
-        //eg. condition => { $in: [ "apples", "oranges" ] }
+        // TODO: remove the items that satisfy the condition
+        // eg. condition => { $in: [ "apples", "oranges" ] }
       } else {
-        doc = doc[field].filter((item) => {
+        doc = doc[field].filter(item => {
           return item !== modification[field];
         });
       }
@@ -258,11 +258,11 @@ const pull = (doc, modification, options) => {
  */
 
 const push = (doc, modification, options) => {
-  //TODO: Support updates via JSON typed field. Eg, "user.age"
+  // TODO: Support updates via JSON typed field. Eg, "user.age"
   for (const field in modification) {
     if (doc[field] && doc[field].constructor === Array) {
-      //TODO: Support the following modifiers
-      //https://docs.mongodb.com/manual/reference/operator/update/push/#modifiers
+      // TODO: Support the following modifiers
+      // https://docs.mongodb.com/manual/reference/operator/update/push/#modifiers
       doc[field].push(modification[field]);
     } else if (!doc[field]) {
       doc[field] = [modification[field]];
@@ -278,11 +278,11 @@ const push = (doc, modification, options) => {
  */
 
 const pullAll = (doc, modification, options) => {
-  //TODO: Support updates via JSON typed field. Eg, "user.age"
+  // TODO: Support updates via JSON typed field. Eg, "user.age"
   for (const field in modification) {
     if (doc[field] && doc[field].constructor === Array) {
-      modification[field].forEach((element) => {
-        doc = doc[field].filter((item) => {
+      modification[field].forEach(element => {
+        doc = doc[field].filter(item => {
           if (item.constructor === Array) {
             return !arraysEqual(item, element);
           }

@@ -4,23 +4,31 @@
     "es6": true,
     "node": true
   },
-  "extends": ["eslint:recommended", "prettier"],
+  "extends": ["eslint:recommended", "google", "prettier"],
   "globals": {
     "Atomics": "readonly",
     "SharedArrayBuffer": "readonly"
   },
-  "parser": "@typescript-eslint/parser",
   "parserOptions": {
     "ecmaVersion": 11,
     "sourceType": "module"
   },
-  "plugins": ["@typescript-eslint"],
   "rules": {
     "semi": ["error", "always"],
     "quotes": ["error", "double"],
     "no-unused-vars": 0,
     "prefer-const": "warn",
     "no-var": "error",
-    "no-undef": "off"
-  }
+    "no-undef": "off",
+    "require-jsdoc":"off"
+
+  },    
+  "overrides": [
+    {
+        "files": ["*.js", "*.jsx"],
+        "rules": {
+            "no-dupe-class-members": "off"
+        }
+    }
+]
 }

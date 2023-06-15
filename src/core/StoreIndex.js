@@ -1,17 +1,13 @@
-class StoreIndex {
-  _index: any = {};
-  store: any;
-  loaded: boolean = false;
-
+export default class StoreIndex {
   constructor() {
     this._index = {};
     this.store = null;
   }
 
-  get(name: string) {
+  get(name) {
     return this._index[name];
   }
-  handleEntry(entry: any) {
+  handleEntry(entry) {
     const { payload } = entry;
     switch (payload.op) {
       case "collection.create": {
@@ -20,7 +16,7 @@ class StoreIndex {
           this.store.events.emit("db.createCollection", name, address);
         }
         this._index[name] = {
-          address,
+          address
         };
         break;
       }
@@ -34,13 +30,12 @@ class StoreIndex {
       }
     }
   }
-  updateIndex(oplog: any) {
+  updateIndex(oplog) {
     if (!this.loaded) {
-      oplog.values.forEach((item: any) => {
+      oplog.values.forEach(item => {
         this.handleEntry(item);
       });
     }
     this.loaded = true;
   }
 }
-module.exports = StoreIndex;

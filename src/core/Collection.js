@@ -1,55 +1,21 @@
-import { Ipfs } from "ipfs";
-import { IdentityProvider } from "orbit-db-identity-provider";
-import {
-  InsertOptions,
-  InsertOneOptions,
-  DocumentInterface,
-  FindOptionsInterface,
-  FindOneAndUpdateOptionsInterface,
-  FindOneAndDeleteOptionsInterface,
-  UpdateOptionsInterface,
-  UpdateOneOptionsInterface,
-  UpdateManyOptionsInterface,
-  DeleteOneOptionsInterface,
-  DeleteManyOptionsInterface,
-  ImportOptionsInterface,
-  ImportStreamOptionsInterface,
-  ExportOptionsInterface,
-  IStoreOptions,
-} from "./interfaces";
-import { LogEntry } from "ipfs-log";
-const OrbitdbStore = require("orbit-db-store");
-const ObjectId = require("bson-objectid");
-const CID = require("cids");
-const CollectionIndex = require("./CollectionIndex");
-const DagCbor = require("ipld-dag-cbor");
+import OrbitdbStore from "orbit-db-store";
+import ObjectId from "bson-objectid";
+import { CID } from "multiformats/cid";
+import CollectionIndex from "./CollectionIndex.js";
+import { encode, decode } from "@ipld/dag-cbor";
 
 class Collection extends OrbitdbStore {
-  constructor(
-    ipfs: Ipfs,
-    id: IdentityProvider,
-    dbname: string,
-    options: IStoreOptions
-  ) {
+  constructor(ipfs, id, dbname, options) {
     const opts = Object.assign({}, { Index: CollectionIndex });
     Object.assign(opts, options);
     super(ipfs, id, dbname, opts);
     this._type = "aviondb.collection";
-    this.events.on(
-      "write",
-      (address: string, entry: LogEntry<any>, heads: LogEntry<any>[]) => {
-        this._index.handleEntry(entry);
-      }
-    );
+    this.events.on("write", (address, entry, heads) => {
+      this._index.handleEntry(entry);
+    });
     this.events.on(
       "replicate.progress",
-      (
-        address: string,
-        hash: Multihash,
-        entry: LogEntry<any>,
-        progress: number,
-        total: number
-      ) => {
+      (address, hash, entry, progress, total) => {
         this._index.handleEntry(entry);
       }
     );
@@ -64,19 +30,15 @@ class Collection extends OrbitdbStore {
    * @returns {Promise<string>} Returns a Promise that resolves to CID of the inserted DAG that points to the inserted document(s)
    */
 
-  insert(
-    docs: Array<DocumentInterface>,
-    options?: InsertOptions,
-    callback?: Function
-  ): Promise<string> {
+  insert(docs, options, callback) {
     for (const doc of docs) {
       if (!doc._id) {
-        doc._id = ObjectId.generate();
+        doc._id = new ObjectId();
       }
     }
     return this._addOperation({
       op: "INSERT",
-      value: docs,
+      value: docs
     });
   }
 
@@ -86,13 +48,9 @@ class Collection extends OrbitdbStore {
    * @param {DocumentInterface} doc Single Document/Record
    * @param {InsertOneOptions} options options for insertOne()
    * @param {Function} callback Callback function
-   * @returns {Promise<string>} Returns a Promise that resolves to CID of the inserted DAG that points to the inserted document
+   * @return {Promise<string>} Returns a Promise that resolves to CID of the inserted DAG that points to the inserted document
    */
-  async insertOne(
-    doc: DocumentInterface,
-    options?: InsertOneOptions,
-    callback?: Function
-  ): Promise<string> {
+  async insertOne(doc, options, callback) {
     if (typeof doc !== "object")
       throw new Error("Object documents are only supported");
 
@@ -109,12 +67,7 @@ class Collection extends OrbitdbStore {
    * @returns {Promise<Array<DocumentInterface>>} Returns a Promise that resolves to an Array of Document(s)
    */
 
-  find(
-    query: object,
-    projection?: object | string,
-    options?: FindOptionsInterface,
-    callback?: Function
-  ): Promise<Array<DocumentInterface>> {
+  find(query, projection, options, callback) {
     return this._index.find(query, projection, options, callback);
   }
 
@@ -128,12 +81,7 @@ class Collection extends OrbitdbStore {
    * @returns {Promise<DocumentInterface>} Returns a Promise that resolves a Document
    */
 
-  findOne(
-    query: object,
-    projection?: object | string,
-    options?: object,
-    callback?: Function
-  ): Promise<DocumentInterface> {
+  findOne(query, projection, options, callback) {
     return this._index.findOne(query);
   }
 
@@ -147,18 +95,13 @@ class Collection extends OrbitdbStore {
    * @returns {Promise<DocumentInterface>} Returns a Promise that resolves to the updated Document
    */
 
-  async findOneAndUpdate(
-    filter: object = {},
-    modification: object,
-    options?: FindOneAndUpdateOptionsInterface,
-    callback?: Function
-  ): Promise<DocumentInterface> {
+  async findOneAndUpdate(filter = {}, modification, options, callback) {
     const doc = await this.findOne(filter);
     if (doc) {
       await this._addOperation({
         op: "UPDATE",
         value: [doc._id],
-        modification: modification,
+        modification: modification
       });
     }
     return doc;
@@ -169,18 +112,14 @@ class Collection extends OrbitdbStore {
    * @param {object} filter The selection criteria for the deletion. The same query selectors as in the find() method are available.
    * @param {FindOneAndDeleteOptionsInterface} options Options for findOneAndDelete()
    * @param {Function} callback Callback function
-   * @returns {Promise<DocumentInterface>} Returns a Promise that resolves to the deleted Document
+   * @return {Promise<DocumentInterface>} Returns a Promise that resolves to the deleted Document
    */
-  async findOneAndDelete(
-    filter: object = {},
-    options?: FindOneAndDeleteOptionsInterface,
-    callback?: Function
-  ): Promise<DocumentInterface> {
+  async findOneAndDelete(filter = {}, options, callback) {
     const doc = await this.findOne(filter);
     if (doc) {
       await this._addOperation({
         op: "DELETE",
-        value: [doc._id],
+        value: [doc._id]
       });
     }
     return doc;
@@ -193,14 +132,9 @@ class Collection extends OrbitdbStore {
    * @param {object|string} projection Projection (not implemented yet)
    * @param {object} options Options for findById()
    * @param {Function} callback Callback function
-   * @returns {Promise<DocumentInterface>} Returns a Promise that resolves to a Document with matching "_id"
+   * @return {Promise<DocumentInterface>} Returns a Promise that resolves to a Document with matching "_id"
    */
-  findById(
-    _id: string | number,
-    projection?: object | string,
-    options?: object,
-    callback?: Function
-  ): Promise<DocumentInterface> {
+  findById(_id, projection, options, callback) {
     return this._index.findById(_id, projection, options, callback);
   }
 
@@ -213,16 +147,13 @@ class Collection extends OrbitdbStore {
    * @returns {Promise<DocumentInterface>} Returns a Promise that resolves to the deleted Document with matching "_id"
    */
 
-  async findByIdAndDelete(
-    _id: string | number,
-    options?: object,
-    callback?: Function
-  ): Promise<DocumentInterface> {
-    const doc = this._index.findById(_id);
+  async findByIdAndDelete(_id, options, callback) {
+    const doc = await this._index.findById(_id);
+
     if (doc) {
       await this._addOperation({
         op: "DELETE",
-        value: [doc._id],
+        value: [doc._id]
       });
     }
     return doc;
@@ -239,19 +170,14 @@ class Collection extends OrbitdbStore {
    * @returns {Promise<DocumentInterface>} Returns a Promise that resolves to the updated Document with matching "_id"
    */
 
-  async findByIdAndUpdate(
-    _id: string | number,
-    modification: object,
-    options: object = {},
-    callback?: Function
-  ): Promise<DocumentInterface> {
+  async findByIdAndUpdate(_id, modification, options = {}, callback) {
     const doc = await this._index.findById(_id);
     if (doc) {
       await this._addOperation({
         op: "UPDATE",
         value: [doc._id],
         modification: modification,
-        options: options,
+        options: options
       });
     }
     return doc;
@@ -287,17 +213,12 @@ class Collection extends OrbitdbStore {
      * @returns {Promise<Array<DocumentInterface>>} Returns a Promise that resolves to an Array of updated Document(s)
      */
 
-  async update(
-    filter: object = {},
-    modification: object,
-    options: UpdateOptionsInterface = {},
-    callback?: Function
-  ): Promise<Array<DocumentInterface>> {
+  async update(filter = {}, modification, options = {}, callback) {
     const ids = [];
     const docs = [];
     if (options.multi) {
       docs.push(...(await this.find(filter)));
-      ids.push(...docs.map((item) => item._id));
+      ids.push(...docs.map(item => item._id));
     }
     if (options.upsert && ids.length === 0) {
       // TODO: implement upsert condition for $setOnInsert operator
@@ -308,14 +229,14 @@ class Collection extends OrbitdbStore {
       const doc = await this.findOne(filter);
       if (doc) {
         docs.push(doc);
-        ids.push(...docs.map((item) => item._id));
+        ids.push(...docs.map(item => item._id));
       }
     }
     await this._addOperation({
       op: "UPDATE",
       value: ids,
       modification: modification,
-      options: options,
+      options: options
     });
     return docs;
   }
@@ -342,19 +263,14 @@ class Collection extends OrbitdbStore {
      * @returns {Promise<DocumentInterface>} Returns a Promise that resolves to an updated Document
      */
 
-  async updateOne(
-    filter: object = {},
-    modification: object,
-    options: UpdateOneOptionsInterface = {},
-    callback?: Function
-  ): Promise<DocumentInterface> {
+  async updateOne(filter = {}, modification, options = {}, callback) {
     const doc = await this.findOne(filter);
     if (doc) {
       await this._addOperation({
         op: "UPDATE",
         value: [doc._id],
         modification: modification,
-        options: options,
+        options: options
       });
     }
     return doc;
@@ -383,19 +299,14 @@ class Collection extends OrbitdbStore {
      * @returns {Promise<Array<DocumentInterface>>} Returns a Promise that resolves to an Array of updated Document(s)
      */
 
-  async updateMany(
-    filter: object = {},
-    modification: object,
-    options: UpdateManyOptionsInterface = {},
-    callback?: Function
-  ): Promise<Array<DocumentInterface>> {
+  async updateMany(filter = {}, modification, options = {}, callback) {
     const docs = await this.find(filter);
-    const ids = docs.map((item: DocumentInterface) => item._id);
+    const ids = docs.map(item => item._id);
     await this._addOperation({
       op: "UPDATE",
       value: ids,
       modification: modification,
-      options: options,
+      options: options
     });
     return docs;
   }
@@ -409,16 +320,12 @@ class Collection extends OrbitdbStore {
    * @returns {Promise<DocumentInterface>} Returns a Promise that resolves to a deleted Document
    */
 
-  async deleteOne(
-    filter: object = {},
-    options?: DeleteOneOptionsInterface,
-    callback?: Function
-  ): Promise<DocumentInterface> {
+  async deleteOne(filter = {}, options, callback) {
     const doc = await this.findOne(filter);
     if (doc) {
       await this._addOperation({
         op: "DELETE",
-        value: [doc._id],
+        value: [doc._id]
       });
     }
     return doc;
@@ -433,17 +340,13 @@ class Collection extends OrbitdbStore {
    * @returns {Promise<Array<DocumentInterface>>} Returns a Promise that resolves to an Array of deleted Document
    */
 
-  async deleteMany(
-    filter: object = {},
-    options?: DeleteManyOptionsInterface,
-    callback?: Function
-  ): Promise<Array<DocumentInterface>> {
+  async deleteMany(filter = {}, options, callback) {
     const docs = await this.find(filter);
-    const ids = docs.map((item: DocumentInterface) => item._id);
+    const ids = docs.map(item => item._id);
     if (ids.length > 0) {
       await this._addOperation({
         op: "DELETE",
-        value: ids,
+        value: ids
       });
     }
     return docs;
@@ -456,18 +359,15 @@ class Collection extends OrbitdbStore {
    * @returns {Promise<Array<DocumentInterface>>} Returns a Promise that resolves to an Array of unique Document(s)
    */
 
-  distinct(
-    key: object | string | number,
-    query: object
-  ): Promise<Array<DocumentInterface>> {
+  distinct(key, query) {
     return this._index.distinct(key, query);
   }
   /**
    * Returns CID string representing oplog heads.
    * returns null if oplog is empty
-   * @returns {string} Returns CID string representing oplog heads.
+   * @return {string} Returns CID string representing oplog heads.
    */
-  async getHeadHash(): Promise<string | null> {
+  async getHeadHash() {
     try {
       return await this._oplog.toMultihash();
     } catch {
@@ -479,26 +379,23 @@ class Collection extends OrbitdbStore {
    * Pauses all write operations until sync is complete.
    * @param {string} hash Head hash string
    * @param {boolean} stopWrites Should we pause write operations while syncing
-   * @returns {Promise<null>}
+   * @return {Promise<null>}
    */
-  async syncFromHeadHash(
-    hash: string,
-    stopWrites?: boolean
-  ): Promise<undefined> {
+  async syncFromHeadHash(hash, stopWrites) {
     if (new CID(hash).equals(new CID(await this.getHeadHash()))) {
-      //Nothing to do
+      // Nothing to do
       return;
     }
-    //Retrieve dag of headhash.
+    // Retrieve dag of headhash.
     const { value } = await this._ipfs.dag.get(hash);
     if (value.id !== this.id) {
       throw "Head Hash ID does not match store ID.";
     }
-    //Generate list of head dags from list of hashes
+    // Generate list of head dags from list of hashes
     const heads = [];
     for (const hashOfHead of value.heads) {
       const val = (await this._ipfs.dag.get(hashOfHead)).value;
-      val.hash = hashOfHead.toBaseEncodedString("base58btc"); //Convert to base58btc to prevent orbit-db-store from throwing comparison errors. (File future bug report)
+      val.hash = hashOfHead.toBaseEncodedString("base58btc"); // Convert to base58btc to prevent orbit-db-store from throwing comparison errors. (File future bug report)
       heads.push(val);
     }
 
@@ -515,29 +412,25 @@ class Collection extends OrbitdbStore {
    * @param {ImportOptionsInterface} options Options for import()
    * @param {Function} progressCallback Callback Function for checking progress of import process
    */
-  async import(
-    data_in: any,
-    options: ImportOptionsInterface = {},
-    progressCallback?: Function
-  ) {
+  async import(data_in, options = {}, progressCallback) {
     if (!options.overwrite) {
-      //TODO: drop database and overwrite all entries.
+      // TODO: drop database and overwrite all entries.
       options.overwrite = false;
     }
     if (!options.type) {
       options.type = "json_mongo";
-      //options.type = "cbor";
-      //options.type = "raw";
+      // options.type = "cbor";
+      // options.type = "raw";
     }
     if (!options.batchSize) {
-      options.batchSize = 25; //Insert 25 at a time by default.
+      options.batchSize = 25; // Insert 25 at a time by default.
     }
 
-    let deserialized_object: any = {};
+    let deserialized_object = {};
     if (options.type === "cbor") {
-      deserialized_object = DagCbor.util.deserialize(data_in);
+      deserialized_object = decode(data_in);
     } else if (options.type === "json_mongo") {
-      deserialized_object = JSON.parse(data_in); //Assumes JSON is serialized.
+      deserialized_object = JSON.parse(data_in); // Assumes JSON is serialized.
     } else if (options.type === "raw") {
       deserialized_object = data_in;
     } else {
@@ -550,7 +443,7 @@ class Collection extends OrbitdbStore {
       }
     }
 
-    const objTotalLength: number = deserialized_object.length;
+    const objTotalLength = deserialized_object.length;
 
     await this.importStream(
       streamGenerator(),
@@ -566,13 +459,8 @@ class Collection extends OrbitdbStore {
    * @param {ImportStreamOptionsInterface} options Options for importStream()
    * @param {Function} progressCallback Callback Function for checking progress of import process
    */
-  async importStream(
-    stream: AsyncIterable<any>,
-    length: number,
-    options: ImportStreamOptionsInterface,
-    progressCallback?: Function
-  ) {
-    const totalLength = length; //Assumes array at the moment.
+  async importStream(stream, length, options, progressCallback) {
+    const totalLength = length; // Assumes array at the moment.
     let currentLength = 0;
     let queue = [];
     for await (const entry of stream) {
@@ -585,7 +473,7 @@ class Collection extends OrbitdbStore {
         }
       } else {
         if (typeof entry._id === "object") {
-          //Assume $oid is being used. Mongodb exports the primary key string under object.
+          // Assume $oid is being used. Mongodb exports the primary key string under object.
           entry._id = entry._id.$oid;
         }
 
@@ -606,18 +494,16 @@ class Collection extends OrbitdbStore {
   /**
    * Exports records in collection
    * @param {ExportOptionsInterface} options Options for export()
-   * @returns {Promise<string | DocumentInterface[]>} Returns a Promise that resolves to the exported data in "cbor", "json_mongo", "raw" format
+   * @return {Promise<string | DocumentInterface[]>} Returns a Promise that resolves to the exported data in "cbor", "json_mongo", "raw" format
    */
-  async export(
-    options: ExportOptionsInterface = {}
-  ): Promise<string | DocumentInterface[]> {
+  async export(options = {}) {
     if (!options.cursor) {
       options.cursor = {}; // No limit.
     }
     if (!options.type) {
       options.type = "json_mongo";
-      //options.type = "cbor";
-      //options.type = "raw";
+      // options.type = "cbor";
+      // options.type = "raw";
     }
     if (!options.query) {
       options.query = {};
@@ -625,11 +511,11 @@ class Collection extends OrbitdbStore {
     const results = await this.find(options.query, null, options.cursor);
     switch (options.type) {
       case "json_mongo": {
-        //TODO: Future streamed json.
+        // TODO: Future streamed json.
         return JSON.stringify(results);
       }
       case "cbor": {
-        return DagCbor.util.serialize(results);
+        return encode(results);
       }
       case "raw": {
         return results;
@@ -642,7 +528,7 @@ class Collection extends OrbitdbStore {
 
   async drop() {
     super.drop();
-    //TODO: broadcast drop message on binding database
+    // TODO: broadcast drop message on binding database
   }
 }
 

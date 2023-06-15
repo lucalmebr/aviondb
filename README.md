@@ -34,7 +34,7 @@ Status: **in active development**
 
 **_NOTE!_** _AvionDB is **alpha-stage** software. It means AvionDB hasn't been security audited and programming APIs and data formats can still change. We encourage you to [reach out to the maintainers](https://discord.gg/88YpNuQ) if you plan to use AvionDB in mission critical systems._
 
-This is the TypeScript implementation and it works with **Browsers**, **Node.js** & **TypeScript** with support for Linux, OS X, and Windows . The minimum required version of Node.js is now 8.6.0 due to the usage of `...` spread syntax. LTS versions (even numbered versions 8, 10, etc) are preferred.
+This is the Javascript implementation and it works with **Browsers** & **Node.js** with support for Linux, OS X, and Windows . The minimum required version of Node.js is now 16. LTS versions (even numbered versions 16, 18, etc) are preferred.
 
 ## Table of Contents
 
@@ -78,8 +78,6 @@ npm install --save aviondb
 // Using Github
 npm install git+https://github.com/dappkit/aviondb.git
 ```
-
-We support both the Current and Active LTS versions of Node.js. Please see [nodejs.org](https://nodejs.org/) for what these currently are. The minimum required version of Node.js is now 8.6.0 due to the usage of `...` spread syntax. LTS versions (even numbered versions 8, 10, etc) are preferred.
 
 ### In a web browser
 

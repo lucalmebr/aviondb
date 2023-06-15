@@ -1,52 +1,43 @@
 "use strict";
 
-const path = require("path");
-const webpack = require("webpack");
+import path from "path";
+import webpack from "webpack";
+import { fileURLToPath } from "url";
+import NodePolyfillPlugin from "node-polyfill-webpack-plugin";
+import TerserPlugin from "terser-webpack-plugin";
 
-module.exports = {
-  entry: "./src/core/index.ts",
-  module: {
-    rules: [
-      {
-        test: /\.ts$/,
-        use: "ts-loader",
-        exclude: /node_modules/,
-      },
-    ],
-  },
+const __filename = fileURLToPath(import.meta.url);
+
+const __dirname = path.dirname(__filename);
+export default {
+  entry: "./src/index.js",
   output: {
-    libraryTarget: "var",
-    library: "AvionDB",
+    library: {
+      name: "AvionDB",
+      type: "var"
+    },
     filename: "./aviondb.min.js",
   },
   target: "web",
-  devtool: "none",
+  devtool: "source-map",
   externals: {
     fs: "{}",
     mkdirp: "{}",
-  },
-  node: {
-    console: false,
-    Buffer: true,
-    mkdirp: "empty",
+    "node:fs/promises": "{}", 
+    "node:path": "{}" 
   },
   plugins: [
-    new webpack.DefinePlugin({
-      "process.env": {
-        NODE_ENV: JSON.stringify(process.env.NODE_ENV),
-      },
-    }),
+		new NodePolyfillPlugin(),
   ],
   resolve: {
     extensions: [".ts", ".js"],
     modules: ["node_modules", path.resolve(__dirname, "./node_modules")],
     alias: {
       leveldown: "level-js",
-    },
+    }
   },
-  resolveLoader: {
-    extensions: [".ts", ".js"],
-    modules: ["node_modules", path.resolve(__dirname, "./node_modules")],
-    moduleExtensions: ["-loader"],
+  optimization: {
+    minimize: true,
+    minimizer: [new TerserPlugin()],
   },
 };

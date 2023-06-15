@@ -1,18 +1,9 @@
-import Store from "./Store";
-import EnvironmentAdapter from "./EnvironmentAdapter";
-import Collection from "./Collection";
-import { Ipfs } from "ipfs";
-import {
-  OrbitDBOptions,
-  StoreOptions,
-  DatabaseConfigOptions,
-} from "./interfaces";
-const { Key } = require("interface-datastore");
+import Store from "./Store.js";
+import EnvironmentAdapter from "./EnvironmentAdapter.js";
+import { Key } from "interface-datastore";
 let datastore = EnvironmentAdapter.datastore(EnvironmentAdapter.repoPath());
 
 class AvionDB extends Store {
-  static Collection = Collection;
-
   /**
    * Creates a new instance of AvionDB if not present already.
    * If an instance with name is exists, then opens and returns the instance.
@@ -23,21 +14,17 @@ class AvionDB extends Store {
    * @returns {Promise<AvionDB>} Returns a Promise that resolves to an AvionDB instance
    */
 
-  static async init(
-    name: string,
-    ipfs: Ipfs,
-    options: StoreOptions = {},
-    orbitDbOptions: OrbitDBOptions = {}
-  ): Promise<AvionDB> {
+  static async init(name, ipfs, options = {}, orbitDbOptions = {}) {
     if (options.path) {
       this.setDatabaseConfig({ path: options.path });
     }
     const aviondb = await super.init(name, ipfs, options, orbitDbOptions);
     const buf = Buffer.from(
       JSON.stringify({
-        address: `/orbitdb/${aviondb.address.root}/${aviondb.address.path}`,
+        address: `/orbitdb/${aviondb.address.root}/${aviondb.address.path}`
       })
     );
+    await datastore.open();
     await datastore.put(new Key(`${name}`), buf);
     return Promise.resolve(aviondb);
   }
@@ -47,7 +34,7 @@ class AvionDB extends Store {
    * @returns {Promise<Array<string>>} Returns a Promise that resolves to ab Array of names of databases.
    */
 
-  static async listDatabases(): Promise<Array<string>> {
+  static async listDatabases() {
     const dbs = datastore.query({});
     const list = [];
     for await (const db of dbs) {
@@ -62,7 +49,7 @@ class AvionDB extends Store {
    * @param options options to specify the path for AvionDB config folder
    */
 
-  static setDatabaseConfig(options: DatabaseConfigOptions) {
+  static setDatabaseConfig(options) {
     datastore = EnvironmentAdapter.datastore(
       EnvironmentAdapter.repoPath(options.path)
     );

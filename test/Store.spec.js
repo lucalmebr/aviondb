@@ -1,30 +1,36 @@
-import AvionDB from "../src/index";
-import Collection from "../src/core/Collection";
-const Cache = require("orbit-db-cache");
-const Keystore = require("orbit-db-keystore");
-const IdentityProvider = require("orbit-db-identity-provider");
-const assert = require("assert");
-const IPFS = require("ipfs");
-const Path = require("path");
-//TODO: proper fix for using ipfs in tests requiring node to be online
+import AvionDB from "../src/index.js";
+import Collection from "../src/core/Collection.js";
+import Cache from "orbit-db-cache";
+import Keystore from "orbit-db-keystore";
+import IdentityProvider from "orbit-db-identity-provider";
+import assert from "assert";
+import * as IPFS from "ipfs";
+
+import path from "path";
+
+import { fileURLToPath } from "url";
+const __filename = fileURLToPath(import.meta.url);
+
+const __dirname = path.dirname(__filename);
+import addr from "orbit-db/src/orbit-db-address.js";
+// TODO: proper fix for using ipfs in tests requiring node to be online
 
 const DefaultOptions = { path: "./.testdb" };
 // Test utils
-const { config, implementations } = require("orbit-db-test-utils");
+import { config } from "orbit-db-test-utils";
 
-const properLevelModule = implementations
-  .filter((i) => i.key.indexOf("memdown") > -1)
-  .map((i) => i.module)[0];
-const storage = require("orbit-db-storage-adapter")(properLevelModule);
+import storageAdapter from "orbit-db-storage-adapter";
+
+const storage = storageAdapter();
 
 describe("DB", function () {
-  let ipfs, testIdentity, identityStore, store, cacheStore;
+  let ipfs; let testIdentity; let identityStore; let store; let cacheStore;
 
   this.timeout(config.timeout);
   const ipfsConfig = Object.assign(
     {},
     {
-      repo: config.defaultIpfsConfig.repo + "-entry" + new Date().getTime(),
+      repo: "store-entry" + new Date().getTime(),
       start: true,
       config: {
         Addresses: {
@@ -56,8 +62,9 @@ describe("DB", function () {
       id: "userA",
       keystore,
     });
-    //ipfs = await startIpfs("js-ipfs", ipfsConfig)
+    // ipfs = await startIpfs("js-ipfs", ipfsConfig)
     ipfs = await IPFS.create(ipfsConfig);
+
     const name = "test-address";
     const options = Object.assign({}, DefaultOptions, { cache });
     store = await AvionDB.init(name, ipfs, options, {
@@ -67,7 +74,7 @@ describe("DB", function () {
   });
   after(async () => {
     await store.close();
-    //await stopIpfs(ipfs)
+    // await stopIpfs(ipfs)
     await ipfs.stop();
     await identityStore.close();
     await cacheStore.close();
@@ -80,7 +87,7 @@ describe("DB", function () {
   it("Get Config Path", async () => {
     assert.strictEqual(
       AvionDB.getDatabaseConfig().path,
-      Path.join(__dirname, "../.testdb", "db")
+      path.join(__dirname, "../.testdb", "db")
     );
   });
 
@@ -94,12 +101,11 @@ describe("DB", function () {
     await collection.insertOne({
       name: "vasa",
     });
-    const addr = require("orbit-db/src/orbit-db-address");
     assert.strict(collection.address instanceof addr, true);
     assert.strictEqual(collection instanceof Collection, true);
   });
   it("Drop Collection", async () => {
-    //TODO: Create test here
+    // TODO: Create test here
   });
   it("List Collections", async () => {
     const collection = await store.initCollection("Users");

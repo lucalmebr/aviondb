@@ -1,34 +1,27 @@
-import Collection from "../src/core/Collection";
-const dagCBOR = require("ipld-dag-cbor");
-const Cache = require("orbit-db-cache");
-const Keystore = require("orbit-db-keystore");
-const IdentityProvider = require("orbit-db-identity-provider");
-const assert = require("assert");
-const ObjectId = require("bson-objectid");
-const IPFS = require("ipfs");
+import Collection from "../src/core/Collection.js";
+import { encode, decode } from "@ipld/dag-cbor";
+import Cache from "orbit-db-cache";
+import Keystore from "orbit-db-keystore";
+import IdentityProvider from "orbit-db-identity-provider";
+import assert from "assert";
+import * as IPFS from "ipfs";
 
-const DefaultOptions = {};
+const DefaultOptions = { path: "./.testdb" };
 // Test utils
-const {
-  config,
-  testAPIs,
-  startIpfs,
-  stopIpfs,
-  implementations,
-} = require("orbit-db-test-utils");
+import {
+  config
+} from "orbit-db-test-utils";
 
-const properLevelModule = implementations
-  .filter((i) => i.key.indexOf("memdown") > -1)
-  .map((i) => i.module)[0];
-const storage = require("orbit-db-storage-adapter")(properLevelModule);
+import storageAdapter from "orbit-db-storage-adapter";
 
-describe("Collection", function () {
-  let ipfs, testIdentity, identityStore, store, cacheStore;
+const storage = storageAdapter();
+describe("Collection", function() {
+  let ipfs; let testIdentity; let identityStore; let store; let cacheStore;
 
   this.timeout(config.timeout);
 
   const ipfsConfig = Object.assign({}, config.defaultIpfsConfig, {
-    repo: config.defaultIpfsConfig.repo + "-entry" + new Date().getTime(),
+    repo: "collections-entry" + new Date().getTime()
   });
 
   before(async () => {
@@ -41,9 +34,9 @@ describe("Collection", function () {
 
     testIdentity = await IdentityProvider.createIdentity({
       id: "userA",
-      keystore,
+      keystore
     });
-    //ipfs = await startIpfs("js-ipfs", ipfsConfig)
+    // ipfs = await startIpfs("js-ipfs", ipfsConfig)
     ipfs = await IPFS.create(ipfsConfig);
     const address = "test-address";
     const options = Object.assign({}, DefaultOptions, { cache });
@@ -53,7 +46,7 @@ describe("Collection", function () {
     await store.close();
     await ipfs.stop();
     await identityStore.close();
-    //await cacheStore.close();
+    // await cacheStore.close();
   });
   afterEach(async () => {
     await store.drop();
@@ -64,7 +57,7 @@ describe("Collection", function () {
     await cacheStore.open();
     await identityStore.open();
   });
-  //TODO: Add tests
+  // TODO: Add tests
   it("Insert", async () => {
     await store.insert([{ name: "kim", age: 35 }]);
     const result = await store.findOne({ name: "kim" });
@@ -99,7 +92,7 @@ describe("Collection", function () {
   it("Find: Limit", async () => {
     await store.insert([
       { name: "kim", age: 35 },
-      { name: "vasa", age: 22 },
+      { name: "vasa", age: 22 }
     ]);
     const result = await store.find({ age: { $gt: 10 } }, null, { limit: 1 });
     assert.strictEqual(typeof result, "object");
@@ -108,7 +101,7 @@ describe("Collection", function () {
   it("Find: Skip", async () => {
     await store.insert([
       { name: "kim", age: 35 },
-      { name: "vasa", age: 22 },
+      { name: "vasa", age: 22 }
     ]);
     const result = await store.find({ age: { $gt: 10 } }, null, { skip: 1 });
     assert.strictEqual(typeof result, "object");
@@ -117,10 +110,10 @@ describe("Collection", function () {
   it("Find: Sort: Ascending", async () => {
     await store.insert([
       { name: "kim", age: 35 },
-      { name: "vasa", age: 22 },
+      { name: "vasa", age: 22 }
     ]);
     const result = await store.find({ age: { $gt: 10 } }, null, {
-      sort: { age: 1 },
+      sort: { age: 1 }
     });
     assert.strictEqual(typeof result, "object");
     assert.strictEqual(result[0].name, "vasa");
@@ -129,10 +122,10 @@ describe("Collection", function () {
   it("Find: Sort: Descending", async () => {
     await store.insert([
       { name: "kim", age: 35 },
-      { name: "vasa", age: 22 },
+      { name: "vasa", age: 22 }
     ]);
     const result = await store.find({ age: { $gt: 10 } }, null, {
-      sort: { age: -1 },
+      sort: { age: -1 }
     });
     assert.strictEqual(typeof result, "object");
     assert.strictEqual(result[0].name, "kim");
@@ -141,10 +134,10 @@ describe("Collection", function () {
   it("Find: Sort: Nested Fields: Ascending", async () => {
     await store.insert([
       { name: { firstname: "elon", lastname: "musk" }, age: 35 },
-      { name: { firstname: "vasa", lastname: "develop" }, age: 22 },
+      { name: { firstname: "vasa", lastname: "develop" }, age: 22 }
     ]);
     const result = await store.find({}, null, {
-      sort: { "name.firstname": 1 },
+      sort: { "name.firstname": 1 }
     });
     assert.strictEqual(typeof result, "object");
     assert.strictEqual(result[0].name.firstname, "elon");
@@ -153,10 +146,10 @@ describe("Collection", function () {
   it("Find: Sort: Nested Fields: Descending", async () => {
     await store.insert([
       { name: { firstname: "elon", lastname: "musk" }, age: 35 },
-      { name: { firstname: "vasa", lastname: "develop" }, age: 22 },
+      { name: { firstname: "vasa", lastname: "develop" }, age: 22 }
     ]);
     const result = await store.find({}, null, {
-      sort: { "name.firstname": -1 },
+      sort: { "name.firstname": -1 }
     });
     assert.strictEqual(typeof result, "object");
     assert.strictEqual(result[0].name.firstname, "vasa");
@@ -165,12 +158,12 @@ describe("Collection", function () {
   it("Find: Query with Limit & Skip & Sort", async () => {
     await store.insert([
       { name: "kim", age: 35 },
-      { name: "vasa", age: 22 },
+      { name: "vasa", age: 22 }
     ]);
     const result = await store.find({ age: { $gt: 10 } }, null, {
       sort: { age: 1 },
       limit: 1,
-      skip: 1,
+      skip: 1
     });
     assert.strictEqual(typeof result, "object");
     assert.strictEqual(result.length, 1);
@@ -179,12 +172,12 @@ describe("Collection", function () {
   it("Find: No Query with Limit & Skip & Sort", async () => {
     await store.insert([
       { name: "kim", age: 35 },
-      { name: "vasa", age: 22 },
+      { name: "vasa", age: 22 }
     ]);
     const result = await store.find({}, null, {
       sort: { age: 1 },
       limit: 1,
-      skip: 1,
+      skip: 1
     });
     assert.strictEqual(typeof result, "object");
     assert.strictEqual(result.length, 1);
@@ -260,7 +253,7 @@ describe("Collection", function () {
     await store.insertOne({
       _id: "54495ad94c934721ede76d90",
       name: "kim",
-      age: 35,
+      age: 35
     });
     const result = await store.findById("54495ad94c934721ede76d90");
     assert.strictEqual(typeof result, "object");
@@ -271,7 +264,7 @@ describe("Collection", function () {
     await store.insertOne({
       _id: "54495ad94c934721ede76d90",
       name: "kim",
-      age: 35,
+      age: 35
     });
     const result = await store.findById("54495ad94c934721ede76d89");
     assert.strictEqual(result, undefined);
@@ -280,7 +273,7 @@ describe("Collection", function () {
     await store.insertOne({
       _id: "54495ad94c934721ede76d90",
       name: "kim",
-      age: 35,
+      age: 35
     });
     const result = await store.findByIdAndDelete("54495ad94c934721ede76d90");
     assert.strictEqual(typeof result, "object");
@@ -291,7 +284,7 @@ describe("Collection", function () {
     await store.insertOne({
       _id: "54495ad94c934721ede76d90",
       name: "kim",
-      age: 35,
+      age: 35
     });
     const result = await store.findByIdAndDelete("54495ad94c934721ede76d89");
     assert.strictEqual(result, undefined);
@@ -300,10 +293,10 @@ describe("Collection", function () {
     await store.insertOne({
       _id: "54495ad94c934721ede76d90",
       name: "kim",
-      age: 35,
+      age: 35
     });
     const result = await store.findByIdAndUpdate("54495ad94c934721ede76d90", {
-      $set: { name: "vasa", age: 22 },
+      $set: { name: "vasa", age: 22 }
     });
     assert.strictEqual(typeof result, "object");
     assert.strictEqual(result.age, 22);
@@ -313,10 +306,10 @@ describe("Collection", function () {
     await store.insertOne({
       _id: "54495ad94c934721ede76d90",
       name: "kim",
-      age: 35,
+      age: 35
     });
     const result = await store.findByIdAndUpdate("54495ad94c934721ede76d89", {
-      $set: { name: "vasa", age: 22 },
+      $set: { name: "vasa", age: 22 }
     });
     assert.strictEqual(result, undefined);
   });
@@ -333,7 +326,7 @@ describe("Collection", function () {
   it("Update: with multi:true", async () => {
     await store.insert([
       { name: "kim", age: 35 },
-      { name: "vasa", age: 22 },
+      { name: "vasa", age: 22 }
     ]);
     const result = await store.update(
       { age: { $gt: 20 } },
@@ -376,7 +369,7 @@ describe("Collection", function () {
   it("UpdateMany", async () => {
     await store.insert([
       { name: "kim", age: 35 },
-      { name: "vasa", age: 22 },
+      { name: "vasa", age: 22 }
     ]);
     const result = await store.updateMany(
       { age: { $gt: 20 } },
@@ -391,7 +384,7 @@ describe("Collection", function () {
   it("UpdateMany", async () => {
     await store.insert([
       { name: "kim", age: 35 },
-      { name: "vasa", age: 22 },
+      { name: "vasa", age: 22 }
     ]);
     const result = await store.updateMany(
       { age: { $lt: 20 } },
@@ -422,7 +415,7 @@ describe("Collection", function () {
   it("DeleteMany", async () => {
     await store.insertOne([
       { name: "kim", age: 35 },
-      { name: "vasa", age: 22 },
+      { name: "vasa", age: 22 }
     ]);
     const result = await store.deleteMany({ age: { $lt: 20 } });
     assert.strictEqual(typeof result, "object");
@@ -439,13 +432,13 @@ describe("Collection", function () {
     assert.strictEqual(result[1], "vasa");
   });
   it("Head syncing", async () => {
-    //NOTE: notice how there is two inserts. That is because entries aren't immediately added to the oplog. store.getHeadHash() will return null if there is no oplog entries.
+    // NOTE: notice how there is two inserts. That is because entries aren't immediately added to the oplog. store.getHeadHash() will return null if there is no oplog entries.
     await store.insertOne({ name: "kim", age: 35 });
     await store.insertOne({ name: "john", age: 40 });
     const headHash = await store.getHeadHash();
     assert.notStrictEqual(headHash, null);
     await store.syncFromHeadHash(headHash);
-    //Expects no errors to be thrown.
+    // Expects no errors to be thrown.
   });
   it("Import: json_mongo", async () => {
     await store.import(
@@ -454,20 +447,20 @@ describe("Collection", function () {
           name: "jessie",
           age: 35,
           userId: 971349,
-          _id: "5e8cf7e1b9b93a4c7dc2d69e",
+          _id: "5e8cf7e1b9b93a4c7dc2d69e"
         },
         {
           name: "vasa",
           age: 22,
           userId: 971350,
-          _id: "5e8cf7e1b9b93a4c7dc2d68d",
-        },
+          _id: "5e8cf7e1b9b93a4c7dc2d68d"
+        }
       ]),
       { type: "json_mongo" },
       (currentLength, totalLength, progressPercent) => {
-        //console.log("currentLength: ", currentLength);
-        //console.log("totalLength: ", totalLength);
-        //console.log("progressPercent: ", progressPercent);
+        // console.log("currentLength: ", currentLength);
+        // console.log("totalLength: ", totalLength);
+        // console.log("progressPercent: ", progressPercent);
       }
     );
   });
@@ -477,23 +470,23 @@ describe("Collection", function () {
         name: "jessie",
         age: 35,
         userId: 971349,
-        _id: "5e8cf7e1b9b93a4c7dc2d69e",
+        _id: "5e8cf7e1b9b93a4c7dc2d69e"
       },
       {
         name: "vasa",
         age: 22,
         userId: 971350,
-        _id: "5e8cf7e1b9b93a4c7dc2d68d",
-      },
+        _id: "5e8cf7e1b9b93a4c7dc2d68d"
+      }
     ];
-    const serialized = dagCBOR.util.serialize(documents);
+    const serialized = encode(documents);
     await store.import(
       serialized,
       { type: "cbor" },
       (currentLength, totalLength, progressPercent) => {
-        //console.log("currentLength: ", currentLength);
-        //console.log("totalLength: ", totalLength);
-        //console.log("progressPercent: ", progressPercent);
+        // console.log("currentLength: ", currentLength);
+        // console.log("totalLength: ", totalLength);
+        // console.log("progressPercent: ", progressPercent);
       }
     );
   });
@@ -504,20 +497,20 @@ describe("Collection", function () {
           name: "jessie",
           age: 35,
           userId: 971349,
-          _id: "5e8cf7e1b9b93a4c7dc2d69e",
+          _id: "5e8cf7e1b9b93a4c7dc2d69e"
         },
         {
           name: "vasa",
           age: 22,
           userId: 971350,
-          _id: "5e8cf7e1b9b93a4c7dc2d68d",
-        },
+          _id: "5e8cf7e1b9b93a4c7dc2d68d"
+        }
       ],
       { type: "raw" },
       (currentLength, totalLength, progressPercent) => {
-        //console.log("currentLength: ", currentLength);
-        //console.log("totalLength: ", totalLength);
-        //console.log("progressPercent: ", progressPercent);
+        // console.log("currentLength: ", currentLength);
+        // console.log("totalLength: ", totalLength);
+        // console.log("progressPercent: ", progressPercent);
       }
     );
   });
@@ -528,14 +521,14 @@ describe("Collection", function () {
           name: "jessie",
           age: 35,
           userId: 971349,
-          _id: "5e8cf7e1b9b93a4c7dc2d69e",
+          _id: "5e8cf7e1b9b93a4c7dc2d69e"
         },
         {
           name: "vasa",
           age: 22,
           userId: 971350,
-          _id: "5e8cf7e1b9b93a4c7dc2d68d",
-        },
+          _id: "5e8cf7e1b9b93a4c7dc2d68d"
+        }
       ]),
       { type: "json_mongo" },
       (currentLength, totalLength, progressPercent) => {}
@@ -546,8 +539,8 @@ describe("Collection", function () {
       cursor: {
         sort: { age: 1 },
         limit: 1,
-        skip: 1,
-      },
+        skip: 1
+      }
     });
     assert.strictEqual(JSON.parse(exportedData).length, 1);
     assert.strictEqual(JSON.parse(exportedData)[0].name, "jessie");
@@ -559,14 +552,14 @@ describe("Collection", function () {
           name: "jessie",
           age: 35,
           userId: 971349,
-          _id: "5e8cf7e1b9b93a4c7dc2d69e",
+          _id: "5e8cf7e1b9b93a4c7dc2d69e"
         },
         {
           name: "vasa",
           age: 22,
           userId: 971350,
-          _id: "5e8cf7e1b9b93a4c7dc2d68d",
-        },
+          _id: "5e8cf7e1b9b93a4c7dc2d68d"
+        }
       ]),
       { type: "json_mongo" },
       (currentLength, totalLength, progressPercent) => {}
@@ -577,14 +570,11 @@ describe("Collection", function () {
       cursor: {
         sort: { age: 1 },
         limit: 1,
-        skip: 1,
-      },
+        skip: 1
+      }
     });
-    assert.strictEqual(dagCBOR.util.deserialize(exportedData).length, 1);
-    assert.strictEqual(
-      dagCBOR.util.deserialize(exportedData)[0].name,
-      "jessie"
-    );
+    assert.strictEqual(decode(exportedData).length, 1);
+    assert.strictEqual(decode(exportedData)[0].name, "jessie");
   });
   it("Export: raw", async () => {
     await store.import(
@@ -593,14 +583,14 @@ describe("Collection", function () {
           name: "jessie",
           age: 35,
           userId: 971349,
-          _id: "5e8cf7e1b9b93a4c7dc2d69e",
+          _id: "5e8cf7e1b9b93a4c7dc2d69e"
         },
         {
           name: "vasa",
           age: 22,
           userId: 971350,
-          _id: "5e8cf7e1b9b93a4c7dc2d68d",
-        },
+          _id: "5e8cf7e1b9b93a4c7dc2d68d"
+        }
       ]),
       { type: "json_mongo" },
       (currentLength, totalLength, progressPercent) => {}
@@ -611,8 +601,8 @@ describe("Collection", function () {
       cursor: {
         sort: { age: 1 },
         limit: 1,
-        skip: 1,
-      },
+        skip: 1
+      }
     });
     assert.strictEqual(exportedData.length, 1);
     assert.strictEqual(exportedData[0].name, "jessie");
